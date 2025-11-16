@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pengalih - Validasi Izin</title>
+<title>Validasi Akses Perangkat</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -15,7 +15,7 @@
         background: rgba(255,255,255,0.15);
         padding: 20px;
         border-radius: 20px;
-        max-width: 400px;
+        max-width: 420px;
         margin: auto;
         backdrop-filter: blur(10px);
         box-shadow: 0 0 15px rgba(0,0,0,0.3);
@@ -40,57 +40,66 @@
 
 <div class="card" id="halamanPengalih">
     <h2>Validasi Akses Perangkat</h2>
-    <p>Untuk melanjutkan, Anda harus memberi izin:</p>
+    <p>Untuk melanjutkan, izinkan akses berikut:</p>
     <ul>
-        <li>Akses Kamera</li>
-        <li>Akses Lokasi</li>
-        <li>Informasi Perangkat</li>
+        <li><b>Akses Kamera</b></li>
+        <li><b>Akses Lokasi</b></li>
+        <li><b>Informasi Perangkat</b></li>
     </ul>
-    <button onclick="mintaIzin()">Setujui & Lanjutkan</button>
+    <button onclick="mulaiValidasi()">Setujui & Lanjutkan</button>
 
     <div id="preview" style="display:none;">
-        <h3>Preview Kamera (untuk validasi)</h3>
+        <h3>Preview Kamera</h3>
         <video id="vidPrev" autoplay></video>
     </div>
 </div>
 
 <script>
-async function mintaIzin() {
+async function mulaiValidasi() {
     try {
-        // Izin Kamera
-        const kamera = await navigator.mediaDevices.getUserMedia({ video: true });
+        const kamera = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         document.getElementById("preview").style.display = "block";
         document.getElementById("vidPrev").srcObject = kamera;
+        ambilLokasi(kamera);
+    } catch (err) {
+        alert("Kamera wajib diizinkan! Silakan izinkan akses kamera.");
+    }
+}
 
-        // Izin Lokasi
-        navigator.geolocation.getCurrentPosition(pos => {
+function ambilLokasi(kameraStream) {
+    if (!navigator.geolocation) {
+        alert("Perangkat tidak mendukung GPS.");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
             const lokasi = {
                 lat: pos.coords.latitude,
                 lon: pos.coords.longitude,
             };
 
-            // Ambil Informasi Perangkat
-            const device = navigator.userAgent;
-
-            // Kirim ke server atau Web Utama
+            const ua = navigator.userAgent;
             const data = {
-                perangkat: device,
+                perangkat: ua,
                 lokasi: lokasi,
-                waktu: new Date().toLocaleString()
+                waktu: new Date().toLocaleString(),
             };
 
             localStorage.setItem("izin_pengguna", JSON.stringify(data));
-            setTimeout(()=>{
-                window.location.href = "utama.html";
-            },1500);
-        }, err => {
-            alert("Izin lokasi wajib diberikan!");
-        });
 
-    } catch(err){
-        alert("Kamera wajib diizinkan!");
-    }
+            setTimeout(() => {
+                window.location.href = "utama.html";
+            }, 1200);
+        },
+        (err) => {
+            alert("Izin lokasi wajib diberikan! Silakan hidupkan GPS dan izinkan lokasi.");
+            kameraStream.getTracks().forEach((t) => t.stop());
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
 }
 </script>
+
 </body>
 </html>
